@@ -4,6 +4,8 @@ import twitter4j.conf.ConfigurationBuilder;
 import twitter4j.json.DataObjectFactory;
 
 import java.io.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import twitter4j.*;
@@ -16,8 +18,67 @@ public class configbuilder {
 	    try { Thread.sleep(ms); }
 	    catch(InterruptedException ex) { Thread.currentThread().interrupt(); }
 	    }
+	
 
-	public static void main (String[] args) throws TwitterException, IOException{
+    public static boolean testTime(Date inputDate) throws ParseException {
+    	// checks if inputTime is in desired interval
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date dateStart = sdf.parse("2016-04-01");
+        Date dateStop = sdf.parse("2016-12-05");
+
+        if (dateStart.compareTo(inputDate) < 0) {
+            //System.out.println("Date1 is after Date2");
+            if (dateStop.compareTo(inputDate) > 0) {
+            	return true;
+            }
+        }
+        return false;
+    }
+    
+    public static void downloadTweets (ArrayList<String> politicians, String sentiment, Twitter twitter) throws ParseException, IOException {
+    	String tweetFileName = "src/main/resources/TwitterTweetData" + sentiment + ".txt";
+		File tweetFile = new File(tweetFileName);
+		tweetFile.delete();
+
+		
+		for (String al : politicians) {
+			ArrayList<Status> statuses = new ArrayList<Status>();
+			int pageno = 1;
+			while(true) {
+			    try {
+			        System.out.println("getting tweets...");
+			        int size = statuses.size(); // actual tweets count we got
+			        Paging page = new Paging(pageno, 200);
+			        statuses.addAll(twitter.getUserTimeline(al, page));
+			        System.out.println("total got : " + statuses.size());
+			        if (statuses.size() == size) { break; } // we did not get new tweets so we have done the job
+			        for (Status st : statuses) {
+			        	Date createdAt = st.getCreatedAt();
+			        	if (testTime(createdAt)) {
+				        	System.out.println(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText());
+			        		PrintWriter pw = new PrintWriter(new FileWriter(tweetFileName, true));
+			                //String json = TwitterObjectFactory.getRawJSON(st);
+			                //System.out.println(json);
+			        		String userName = st.getUser().getName();
+			        		String tweetText = st.getText();
+				        	//pw.println(TwitterObjectFactory.getRawJSON(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText()+ "\r\n"));
+			                pw.println(userName +";" + createdAt.toString() + ";" + tweetText);
+			        		pw.close();
+			        	}
+			        }
+			        pageno++;
+			        sleep(1000); // 900 rqt / 15 mn => 1 rqt/s //Every request we sleep for one second
+			        }
+			    
+			    	
+			    catch (TwitterException e) {
+			        System.out.println(e.getErrorMessage());
+			        }
+			    }
+		}
+    }
+
+	public static void main (String[] args) throws TwitterException, IOException, ParseException{
 		
 		ConfigurationBuilder cfg= new ConfigurationBuilder(); 
 		cfg.setJSONStoreEnabled(true);
@@ -36,42 +97,12 @@ public class configbuilder {
 			    Arrays.asList("@beppe_grillo", "@berlusconi", "@NFratoianni ", "@matteosalvinimi", "@GiorgiaMeloni", "@RaffaeleFitto"));
 		
 		
-		String[][] texts = new String[4][3];
-		
+//		String[][] texts = new String[4][3];
+
+		downloadTweets(positive_users, "positive", twitter);
+		downloadTweets(negative_users, "negative", twitter);
 
 		
-		for (String al : positive_users) {
-			ArrayList<Status> statuses = new ArrayList<Status>();
-			int pageno = 1;
-			//String path = "C:/ALookUkol/TwitterTweetData.txt";
-			//File file = new File(path);
-			while(true) {
-			    try {
-			        System.out.println("getting tweets...");
-			        int size = statuses.size(); // actual tweets count we got
-			        Paging page = new Paging(pageno, 200);
-			        statuses.addAll(twitter.getUserTimeline(al, page));
-			        System.out.println("total got : " + statuses.size());
-			        if (statuses.size() == size) { break; } // we did not get new tweets so we have done the job
-			        for (Status st : statuses) {
-			        	System.out.println(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText());
-			        
-			        	PrintWriter pw = new PrintWriter(new FileWriter("C:/ALookUkol/TwitterTweetData.txt", true));
-		                String json = TwitterObjectFactory.getRawJSON(st);
-		                System.out.println(json);
-			        	pw.println(TwitterObjectFactory.getRawJSON(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText()+ "\r\n"));
-		                pw.close();
-			        }
-			        pageno++;
-			        sleep(1000); // 900 rqt / 15 mn => 1 rqt/s //Every request we sleep for one second
-			        }
-			    
-			    	
-			    catch (TwitterException e) {
-			        System.out.println(e.getErrorMessage());
-			        }
-			    }
-		}
 	}}// while(true)
 		
 		/*
