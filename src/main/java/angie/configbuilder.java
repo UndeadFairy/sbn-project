@@ -34,12 +34,62 @@ public class configbuilder {
         }
         return false;
     }
+    public static ArrayList<String> verifyPolitician(ArrayList<String> inputList, String sentiment, Twitter twitter) throws ParseException, IOException {
+    	// checks if politician has any tweets in given timeframe (3200 twitter limit)
+    	String tweetFileName = "src/main/resources/TwitterPoliticians" + sentiment + ".txt";
+    	File tweetFile = new File(tweetFileName);
+		//tweetFile.delete();
+		
+    	ArrayList<String> passed = new ArrayList<String>();
+    	for (String al : inputList) {
+			ArrayList<Status> statuses = new ArrayList<Status>();
+			int pageno = 1;
+	        int counter = 0;
+			while(true) {
+			    try {
+			        System.out.println("getting tweets...");
+			        int size = statuses.size(); // actual tweets count we got
+			        Paging page = new Paging(pageno, 200);
+			        statuses.addAll(twitter.getUserTimeline(al, page));
+			        System.out.println("total got : " + statuses.size());
+			        if (statuses.size() == size) { break; } // we did not get new tweets so we have done the job
+			        for (Status st : statuses) {
+			        	Date createdAt = st.getCreatedAt();
+			        	if (testTime(createdAt)) {
+			        		counter +=1;
+			        	}
+			        }
+			        pageno++;
+			        sleep(1000); // 900 rqt / 15 mn => 1 rqt/s //Every request we sleep for one second
+			        }
+			    
+			    	
+			    catch (TwitterException e) {
+			        System.out.println(e.getErrorMessage());
+			        }
+			    }
+			System.out.println(al);
+			if (counter > 0) {
+			    passed.add(al);
+			    PrintWriter pw = new PrintWriter(new FileWriter(tweetFileName, true));
+                pw.println(al);
+        		pw.close();
+			}
+			
+		}
+		return passed;
+    	
+    }
+    
     
     public static void downloadTweets (ArrayList<String> politicians, String sentiment, Twitter twitter) throws ParseException, IOException {
     	String tweetFileName = "src/main/resources/TwitterTweetData" + sentiment + ".txt";
+    	String fullTweetFileName = "src/main/resources/TwitterTweetDataFull" + sentiment + ".txt";
+
 		File tweetFile = new File(tweetFileName);
 		tweetFile.delete();
-
+		File tweetFileFull = new File(fullTweetFileName);
+		tweetFileFull.delete();
 		
 		for (String al : politicians) {
 			ArrayList<Status> statuses = new ArrayList<Status>();
@@ -57,6 +107,7 @@ public class configbuilder {
 			        	if (testTime(createdAt)) {
 				        	System.out.println(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText());
 			        		PrintWriter pw = new PrintWriter(new FileWriter(tweetFileName, true));
+			        		PrintWriter pwFull = new PrintWriter(new FileWriter(fullTweetFileName, true));
 			                //String json = TwitterObjectFactory.getRawJSON(st);
 			                //System.out.println(json);
 			        		String userName = st.getUser().getName();
@@ -64,6 +115,8 @@ public class configbuilder {
 				        	//pw.println(TwitterObjectFactory.getRawJSON(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText()+ "\r\n"));
 			                pw.println(userName +";" + createdAt.toString() + ";" + tweetText);
 			        		pw.close();
+				        	pwFull.println(TwitterObjectFactory.getRawJSON(st));
+			        		pwFull.close();
 			        	}
 			        }
 			        pageno++;
@@ -78,6 +131,21 @@ public class configbuilder {
 		}
     }
 
+    public static ArrayList<String> loadPoliticians(String loadname) throws IOException {   
+	    
+    	String tweetFileName = "src/main/resources/" + loadname + ".txt";
+
+
+    	Scanner s = new Scanner(new File(tweetFileName));
+	    ArrayList<String> list = new ArrayList<String>();
+	    while (s.hasNext()){
+	        list.add(s.next());
+	    }
+	    s.close();
+	    return list;
+    }
+    
+    
 	public static void main (String[] args) throws TwitterException, IOException, ParseException{
 		
 		ConfigurationBuilder cfg= new ConfigurationBuilder(); 
@@ -89,56 +157,29 @@ public class configbuilder {
 		
 		TwitterFactory tf = new TwitterFactory(cfg.build());
 		Twitter twitter = tf.getInstance();
-		
+//		ArrayList<String> positive_users = loadPoliticians("TwitterPoliticiansPositiveFull");
+//		ArrayList<String> negative_users = loadPoliticians("TwitterPoliticiansNegativeFull");
+
 		ArrayList<String> positive_users = new ArrayList<String>(
-			    Arrays.asList("@matteorenzi", "@angealfa", "@DenisVerdini", "@enrico_zanetti"));
+			    Arrays.asList("@zaiapresidente", "@matteosalvinimi", "@matteorenzi", "@meb", "@Giorgiolaporta", "@serracchiani", "@EnricoLetta", "@PaoloGentiloni", "@PietroGrasso", "@mariannamadia", "@pdnetwork", "@angealfa", "@emanuelefiano", "@ale_moretti", "@dariofrance", "@AlessiaMorani", "@fabriziobarca", "@graziano_delrio", "@nzingaretti", "@BeppeSala", "@giorgio_gori", "@PietroGrasso", "@lauraboldrini", "@matteorenzi", "@EnricoLetta", "@romanoprodi", "@PCPadoan", "@angealfa", "@meb", "@CarloCalenda", "@ECofficialmusic", "@graziano_delrio", "@dariofrance", "@glgalletti", "@PaoloGentiloni", "@SteGiannini", "@BeaLorenzin", "@mariannamadia", "@maumartina", "@AndreaOrlandosp", "@PCPadoan", "@robertapinotti", "@PolettiGiuliano", "@fabriziobarca", "@emmabonino", "@Cesare_Damiano", "@l_lanzillotta", "@Maurizio_Lupi", "@GioMelandri", "@RutelliTweet", "@sbonaccini", "@SergioChiampa", "@rosariocrocetta", "@VincenzoDeLuca", "@CatiusciaMarini", "@Oliverio_MarioG", "@F_Pigliaru", "@rossipresidente", "@serracchiani", "@nzingaretti", "@VeltroniWalter", "@enzo_salvi", "@LuigiBrugnaro", "@Antonio_Decaro", "@virginiomerola", "@DarioNardella", "@FlavioTosiTW", "@MCacciari44", "@pierofassino", "@giulianopisapia", "@VeltroniWalter", "@sandrogozi", "@MC_Carro", "@giannicuperlo", "@emanuelefiano", "@bobogiac", "@sandrogozi", "@guerini_lorenzo", "@AlessiaMorani", "@lapopistelli", "@LiaQuartapelle", "@AndreaRomano9", "@ivanscalfarotto", "@MarinaSereni", "@BrunoTabacci", "@VVezzali", "@enrico_zanetti", "@FinocchiaroAnna", "@sandrobondi", "@AntonioDePoli", "@bendellavedova", "@FinocchiaroAnna", "@PietroIchino", "@NenciniPsi", "@AndreaOlivero", "@LauraPuppato", "@RPBWARCHITECTS", "@MaurizioSacconi", "@DenisVerdini", "@simonabonafe", "@gualtierieurope", "@ckyenge", "@ale_moretti", "@alessiamosca", "@giannipittella", "@toiapatrizia", "@flaviozanonato", "@AnnaAscani", "@PPBaretta", "@TeresaBellanova", "@rosy_bindi", "@boccadutri", "@F_Boccia", "@FrancescoBonif1", "@meb", "@bragachiara", "@micaela_campana", "@ernestocarbone", "@MC_Carro", "@KhalidChaouki3", "@CovelloStefania", "@Cesare_Damiano", "@titti_disalvo", "@davidefaraone", "@emanuelefiano", "@dietnam", "@dariofrance", "@GiampaoloGalli", "@PaoloGentiloni", "@bobogiac", "@sandrogozi", "@GiuseppeGuerin1", "@guerini_lorenzo", "@MauroGuerraNL", "@YoramGutgeld", "@flavagno", "@LottiLuca", "@mariannamadia", "@mmauripd", "@gennaromigliore", "@AlessiaMorani", "@AndreaOrlandosp", "@DarioParrini", "@piccolapini", "@FabioPorchat", "@faustorac", "@erealacci", "@MatteoRichetti", "@AndreaRomano9", "@Ettore_Rosato", "@PablitoRossi", "@alessiarotta", "@ivanscalfarotto", "@MarinaSereni", "@itinagli", "@VicoLudovico", "@szampa56"));
 		
 		ArrayList<String> negative_users = new ArrayList<String>(
-			    Arrays.asList("@beppe_grillo", "@berlusconi", "@NFratoianni ", "@matteosalvinimi", "@GiorgiaMeloni", "@RaffaeleFitto"));
-		
+			   // Arrays.asList("@NichiVendola", "@robersperanza", "@ignaziomarino", "@virginiaraggi", "@beppe_grillo", "@renatobrunetta", "@SenatoreMonti", "@berlusconi", "@gasparripdl", "@mara_carfagna", "@BSaltamartini", "@GiorgiaMeloni", "@matteosalvinimi", "@carlosibilia", "@luigidimaio", "@GiuliaDiVita", "@Roberto_Fico", "@PaolaTavernaM5S", "@GiancarloCanc", "@GiuliaSarti86", "@pbersani", "@civati", "@gianfranco_fini", "@MassimoLeaderPD", "@deyoungmuseum", "@RaffaeleFitto", "@FrancoFrattini", "@GiancarloGalan", "@msgelmini", "@Ignazio_LaRussa", "@RobertoMaroni_", "@QuagliarielloG", "@_paolo_romani_", "@grotondi", "@micheleemiliano", "@GiovanniToti", "@zaiapresidente", "@r_formigoni", "@renatapolverini", "@c_appendino", "@demagistris", "@rossidoria", "@LeolucaOrlando1", "@AlemannoTW", "@DSantanche", "@DeborahBergamin", "@BiancofioreMiky", "@CalabriaTw", "@Capezzone", "@M_Fedriga", "@ale_dibattista", "@StefanoFassina", "@claudiofava1", "@NFratoianni", "@N_DeGirolamo", "@GabriGiammanco", "@guglielmopicchi", "@lauraravetto", "@elio_vito", "@MarcoFollini", "@giamma71", "@CorradinoMineo", "@LucioMalan", "@m_montevecchi", "@Ale_Mussolini_", "@AlbertoAirola", "@MBuccarella", "@GianlucaVasto", "@CatalfoNunzia", "@andrea_cioffi", "@BarbaraLezzi", "@Carlo_Martelli", "@vilmamoronese", "@NicolaMorra63", "@vitopetrocelli", "@pugliainvita", "@loscibo", "@BerniniAM", "@senantoniorazzi", "@giacomos", "@tatianabasilio1", "@SilviaBM5S", "@Bernini_P", "@AlfonsoBonafede", "@g_brescia", "@FrancBusinarolo", "@MirkoBusto", "@Azzurra_C", "@berenice0104", "@LaCastelliM5s", "@andreacecconi84", "@silviachimienti", "@TiziCip", "@AndCol81", "@VegaColonnese", "@cla_cominardi", "@Emanuela_Corda", "@crippa5stelle", "@FedericoDinca", "@F_DUva", "@DadoneFabiana", "@FedericaDaga", "@matteodallosso", "@Maxdero", "@DgPilot81", "@dellorco85", "@IvanDellaValle", "@Chiara_DiBe", "@ManlioDS", "@federicadieni", "@MFantinati", "@riccardo_fra", "@Gallinella_F", "@LuigiGallo15", "@giosilvia86", "@GiuliaGrilloM5S", "@mirellaliuzzi", "@robertalombardi", "@ManteroM5S", "@DalilaNesci", "@antoniopalmieri", "@PaoloParentela", "@fabiorampelli", "@carlaruocco1", "@JoleSantelli", "@mariaederaM5S", "@LucaSqueri", "@PatriziaTerzoni", "@AngeloTofalo", "@DaniloToninelli", "@GianlucaVacca", "@SVignaroli", "@ale_villarosa"));
+			    Arrays.asList("@Bernini_P", "@AlfonsoBonafede", "@g_brescia", "@FrancBusinarolo", "@MirkoBusto", "@Azzurra_C", "@berenice0104", "@LaCastelliM5s", "@andreacecconi84", "@silviachimienti", "@TiziCip", "@AndCol81", "@VegaColonnese", "@cla_cominardi", "@Emanuela_Corda", "@crippa5stelle", "@FedericoDinca", "@F_DUva", "@DadoneFabiana", "@FedericaDaga", "@matteodallosso", "@Maxdero", "@DgPilot81", "@dellorco85", "@IvanDellaValle", "@Chiara_DiBe", "@ManlioDS", "@federicadieni", "@MFantinati", "@riccardo_fra", "@Gallinella_F", "@LuigiGallo15", "@giosilvia86", "@GiuliaGrilloM5S", "@mirellaliuzzi", "@robertalombardi", "@ManteroM5S", "@DalilaNesci", "@antoniopalmieri", "@PaoloParentela", "@fabiorampelli", "@carlaruocco1", "@JoleSantelli", "@mariaederaM5S", "@LucaSqueri", "@PatriziaTerzoni", "@AngeloTofalo", "@DaniloToninelli", "@GianlucaVacca", "@SVignaroli", "@ale_villarosa"));
+
 		
 //		String[][] texts = new String[4][3];
 
-		downloadTweets(positive_users, "positive", twitter);
-		downloadTweets(negative_users, "negative", twitter);
+		
+		//ArrayList<String> positive_passed = verifyPolitician(positive_users,"positive",  twitter);
+		ArrayList<String> negative_passed = verifyPolitician(negative_users, "negative", twitter);
+		
+		//ArrayList<String> positive_passed_loaded = loadPoliticians("TwitterPoliticianspositive");
+		//ArrayList<String> negative_passed_loaded = loadPoliticians("TwitterPoliticiansnegative");
+		
+		//downloadTweets(positive_passed_loaded, "positive", twitter);
+		//downloadTweets(negative_passed_loaded, "negative", twitter);
 
-		
-	}}// while(true)
-		
-		/*
-		for (String al : positive_users) {
-		
-			Paging page = new Paging (1,200);	
-				
-			List<Status> status = twitter.getUserTimeline(al,page);
-			for (Status st : status) {
-				System.out.println(st.getUser().getName()+"......."+st.getText());
-			}
-		}
-		*/
-	
-/*	
-	for (String al : positive_users) {
-		
-		
-		Paging page = new Paging (1, 100);	
-		List<Status> status = twitter.getUserTimeline(al, page);
-		for (Status st : status) {
-			
-			System.out.println(st.getUser().getName()+"......."+st.getText());
-			String text = st.getUser().getName()+st.getText();
-			try {
-
-                PrintWriter pw = new PrintWriter(new FileWriter("TwitterTweetData.txt", true));
-                pw.println(TwitterObjectFactory.getRawJSON(st));
-                pw.close();	
-              } catch ( IOException e ) {
-                 e.printStackTrace();
-              }
-
-		}
-		}
-	}
-	
-}*/
+		///////////System.out.println(positive_passed_loaded);
+	}}
 
