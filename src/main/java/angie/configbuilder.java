@@ -84,16 +84,16 @@ public class configbuilder {
     
     public static void downloadTweets (ArrayList<String> politicians, String sentiment, Twitter twitter) throws ParseException, IOException {
     	String tweetFileName = "src/main/resources/TwitterTweetData" + sentiment + ".txt";
-    	String fullTweetFileName = "src/main/resources/TwitterTweetDataFull" + sentiment + ".txt";
+    	//String fullTweetFileName = "src/main/resources/TwitterTweetDataFull" + sentiment + ".txt";
 
 		File tweetFile = new File(tweetFileName);
 		tweetFile.delete();
-		File tweetFileFull = new File(fullTweetFileName);
-		tweetFileFull.delete();
+		//File tweetFileFull = new File(fullTweetFileName);
+		//tweetFileFull.delete();
 		
 		PrintWriter pw = new PrintWriter(new FileWriter(tweetFileName, true));
-		PrintWriter pwFull = new PrintWriter(new FileWriter(fullTweetFileName, true));
-        pw.println("tweet_id" + ";" + "screen_name" + ";" + "user_name" + ";" + "favorite_count" + ";" + "created_at" + ";" + "retweet_count" + ";" + "tweet_text");
+		//PrintWriter pwFull = new PrintWriter(new FileWriter(fullTweetFileName, true));
+        pw.println("tweet_id" + ";" + "screen_name" + ";" + "user_name" + ";" + "favorite_count" + ";" + "created_at" + ";" + "retweet_count" + ";" + "retweeted_status_user"+ ";" + "retweeted_status_id" + ";" + "tweet_text");
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
 		for (String politician : politicians) {
@@ -114,15 +114,22 @@ public class configbuilder {
 			                //String json = TwitterObjectFactory.getRawJSON(st);
 			                //System.out.println(json);
 			        		long tweetId = st.getId();
+			        		Status retweetedStatus = st.getRetweetedStatus();
+			        		long retweetedStatusId = 0;
+			        		String retweetedStatusUser = "foo";
+			        		if (retweetedStatus != null) {
+			        			retweetedStatusId = retweetedStatus.getId();
+			        			retweetedStatusUser = retweetedStatus.getUser().getName();
+			        		}
 			        		String userName = st.getUser().getName();
 			        		int favoriteCount = st.getFavoriteCount();
-			        		SimpleDateFormat dateFormatPrint = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-			        		String createdAtStr = dateFormatPrint.format(createdAt);
+				        	SimpleDateFormat dateFormatPrint = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+				        	String createdAtStr = dateFormatPrint.format(createdAt);
 			        		int retweetCount = st.getRetweetCount();
-			        		String tweetText = st.getText();
+			        		String tweetText = st.getText().replace("\n", " ");
 				        	//pw.println(TwitterObjectFactory.getRawJSON(st.getUser().getName()+" : " + st.getCreatedAt() +" : " +st.getText()+ "\r\n"));
-			                pw.println(tweetId + ";" + politician + ";" + userName + ";" + favoriteCount + ";" + createdAtStr + ";" + retweetCount + ";" + tweetText);
-				        	pwFull.println(TwitterObjectFactory.getRawJSON(st));
+			                pw.println(tweetId + ";" + politician + ";" + userName + ";" + favoriteCount + ";" + createdAtStr + ";" + retweetCount + ";" + retweetedStatusUser + ";" + retweetedStatusId + ";" + tweetText);
+				        	//pwFull.println(TwitterObjectFactory.getRawJSON(st));
 			        	}
 			        }
 			        pageno++;
@@ -136,7 +143,7 @@ public class configbuilder {
 			    }
 		}
 		pw.close();
-		pwFull.close();
+		//pwFull.close();
     }
 
     public static ArrayList<String> loadPoliticians(String loadname) throws IOException {   
@@ -184,10 +191,10 @@ public class configbuilder {
 		//ArrayList<String> positive_passed = verifyPolitician(positive_users,"positive",  twitter);
 		//ArrayList<String> negative_passed = verifyPolitician(negative_users, "negative", twitter);
 		
-		//ArrayList<String> positive_passed_loaded = loadPoliticians("TwitterPoliticianspositive");
+		ArrayList<String> positive_passed_loaded = loadPoliticians("TwitterPoliticianspositive");
 		ArrayList<String> negative_passed_loaded = loadPoliticians("TwitterPoliticiansnegative");
 		
-		//downloadTweets(positive_passed_loaded, "positive", twitter);
+		downloadTweets(positive_passed_loaded, "positive", twitter);
 		downloadTweets(negative_passed_loaded, "negative", twitter);
 
 	}}
