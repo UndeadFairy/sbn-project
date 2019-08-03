@@ -263,28 +263,26 @@ private static HashMap<String, String> transformTimeSeriesToSAX( HashMap<String,
     return termSAX;
 }
 
-private static void saveClusterOnHardDisk(final HashMap<String, Integer> clusters, String destFolder) throws IOException {
-    final PrintWriter pw = new PrintWriter(new FileWriter(destFolder));
+private static void writeClusters(final HashMap<String, Integer> clusters, String sentiment) throws IOException {
+    final PrintWriter pw = new PrintWriter(new FileWriter("src/main/resources/clusters_" + sentiment + ".txt"));
 
-    clusters.keySet().forEach(new Consumer<String>() {
-		@Override
-		public void accept(String saxString) {
-		    pw.println(saxString + " " + clusters.get(saxString));
-		}
-	});
+    for (Entry<String, Integer> cluster : clusters.entrySet()) {
+        String key = cluster.getKey();
+        pw.println(key + " " + clusters.get(key));
+    }
 
     pw.close();
 }
 
-private static HashMap<String, Integer> mapSAXClusterToTermCluster(HashMap<String, Integer> hmSAXClusters, HashMap<String, String> hmTermSAX) {
+private static HashMap<String, Integer> clusterMapping(HashMap<String, Integer> saxClusters, HashMap<String, String> termSAX) {
     HashMap<String, Integer> termClusters = new HashMap<>();
     String sax;
 
     // iterate through all the terms, assigning to them the correspondent cluster
     // of their SAX string
-    for (String term : hmTermSAX.keySet()) {
-        sax = hmTermSAX.get(term);
-        termClusters.put(term, hmSAXClusters.get(sax));
+    for (String term : termSAX.keySet()) {
+        sax = termSAX.get(term);
+        termClusters.put(term, saxClusters.get(sax));
     }
 
     return termClusters;
@@ -304,8 +302,28 @@ public static void main (String[] args) throws Exception{
 	    HashMap<String, double[]> termTimeSeriesNegative = termsTimeSeries(nTermsNegative, "negative", 43200000L);
 
         int alphabetSize = 20;
+        int k = 4;
         HashMap<String, String> termSAXPositive = transformTimeSeriesToSAX(termTimeSeriesPositive, alphabetSize);
         HashMap<String, String> termSAXNegative = transformTimeSeriesToSAX(termTimeSeriesNegative, alphabetSize);
+        System.out.println("all before done");
+
+        KMeansAlgorithm KMeansPositive = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXPositive.values()));
+        HashMap<String, Integer> positiveSAXClusters = KMeansPositive.getClusters();
+        System.out.println("positive getclusters done");
+
+        KMeansAlgorithm KMeansNegative = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXNegative.values()));
+        HashMap<String, Integer> negativeSAXClusters = KMeansNegative.getClusters();
+        System.out.println("negative getclusters done");
+        // from the SAX strings, get back to the terms, generating the clusters
+        // for the terms, not the SAX that represent the term frequency vector
+        HashMap<String, Integer> clustersPositive = clusterMapping(positiveSAXClusters, termSAXPositive);
+        HashMap<String, Integer> clustersNegative = clusterMapping(negativeSAXClusters, termSAXNegative);
+        System.out.println("mapping done");
+
+        writeClusters(clustersPositive, "positive");
+        writeClusters(clustersNegative,  "negative");
+        System.out.println("write done");
+
 	    
 	}
 	

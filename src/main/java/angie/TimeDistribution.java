@@ -117,9 +117,6 @@ public static void main (String[] args) throws TwitterException, IOException, Pa
 	ArrayList <Integer> weeksPositive = selectDates(positiveTweets);
 	ArrayList <Integer> weeksNegative = selectDates(negativeTweets);
 
-	System.out.println(weeksPositive);
-	System.out.println(weeksNegative);
-	
 	//write output of histogram count
 	String histogramFileName = "src/main/resources/TweetHistogram.txt";
 	File tweetFile = new File(histogramFileName);
