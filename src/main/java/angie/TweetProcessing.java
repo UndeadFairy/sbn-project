@@ -321,7 +321,7 @@ public static void main (String[] args) throws Exception{
         System.out.println("mapping done");
 
         writeClusters(clustersPositive, "positive");
-        writeClusters(clustersNegative,  "negative");
+        writeClusters(clustersNegative, "negative");
         System.out.println("write done");
 
 	    
