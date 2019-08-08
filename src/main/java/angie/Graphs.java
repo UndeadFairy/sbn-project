@@ -275,8 +275,8 @@ public class Graphs {
             // Get the number of nodes inside each cluster
             List<Integer> numberNodes = numberOfNodesInGraph("src/main/resources/graph_" + prefix + ".txt", k);
 
-            PrintWriter pw_cc = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_largestcc_pokus.txt")); //open the file where the largest connected component will be written to
-            PrintWriter pw_kcore = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_kcore_pokus.txt")); //open the file where the kcore will be written to
+            PrintWriter pw_cc = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_largestcc.txt")); //open the file where the largest connected component will be written to
+            PrintWriter pw_kcore = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_kcore.txt")); //open the file where the kcore will be written to
 
             // create the array of graphs
             WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[k];
@@ -309,12 +309,8 @@ public class Graphs {
                 WeightedUndirectedGraph kcore = kcore(gArray[i]);
                 saveGraphToFile(pw_kcore, mapper, kcore.in, i);
             }
-
             pw_cc.close();
             pw_kcore.close();
         }
     }
-    
-    
-
 }

@@ -154,7 +154,7 @@ public class TweetProcessing {
    
 
 
-private static HashMap<String, double[]> termsTimeSeries( ArrayList<String> termsStatsList, String sentiment, long grain) throws IOException, Exception {
+public static HashMap<String, double[]> termsTimeSeries( ArrayList<String> termsStatsList, String sentiment, long grain) throws IOException, Exception {
     //initialize the vector of frequencies inside the hashmap for all terms. The index of this vector is define as [minDate, minDate+interval, minDate+2*interval,...]
     HashMap<String, double[]> termsFrequencies = new HashMap<String, double[]>();
     long startDate = 1459468800000L;
