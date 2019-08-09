@@ -132,12 +132,12 @@ public class Graphs {
     public static int runner = (int) (Runtime.getRuntime().availableProcessors());
 
 
-    private static List<Integer> numberOfNodesInGraph(String graph, int k) throws IOException {
+    private static List<Integer> numberOfNodesInGraph(String graph) throws IOException {
     
         String[] rows = fileToArray(graph);
         List<Integer> numberNodes = new ArrayList<Integer>();
         int n = rows.length;
-        for (int cIter = 0; cIter < k; cIter++) {
+        for (int cIter = 0; cIter < mainTemporalAnalysis.clusterCount; cIter++) {
             Set<String> words = new HashSet<String>();
             for (int i = 0; i < n; i++) {
                 String[] line = rows[i].split(";");
@@ -152,7 +152,7 @@ public class Graphs {
         return numberNodes;
     }
 
-    private static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph graphUndirected, int k, String graph, NodesMapper<String> mapper) throws IOException {
+    private static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph graphUndirected, String graph, NodesMapper<String> mapper) throws IOException {
         // add the nodes from the a file created with coocurrencegraph.java, and returns the graph
         //ReadFile rf = new ReadFile();
         String[] rows = fileToArray(graph);
@@ -165,7 +165,7 @@ public class Graphs {
         for (int i = 0; i < n; i++) {
             // split the line in 3 parts: node1, node2, and weight
             String[] line = rows[i].split(";");
-            if (Integer.parseInt(line[3]) == k) {
+            if (Integer.parseInt(line[3]) == mainTemporalAnalysis.clusterCount) {
                 String nodeA = line[0];
                 String nodeB = line[1];
                 Double weight = Double.parseDouble(line[2]);
@@ -270,17 +270,15 @@ public class Graphs {
         String[] prefixYesNo = {"positive", "negative"};
         for (String prefix : prefixYesNo) {
 
-            int k = 4;
-
             // Get the number of nodes inside each cluster
-            List<Integer> numberNodes = numberOfNodesInGraph("src/main/resources/graph_" + prefix + ".txt", k);
+            List<Integer> numberNodes = numberOfNodesInGraph("src/main/resources/graph_" + prefix + ".txt");
 
             PrintWriter pw_cc = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_largestcc.txt")); //open the file where the largest connected component will be written to
             PrintWriter pw_kcore = new PrintWriter(new FileWriter("src/main/resources/graph_" + prefix + "_kcore.txt")); //open the file where the kcore will be written to
 
             // create the array of graphs
-            WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[k];
-            for (int i = 0; i < k; i++) {
+            WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[mainTemporalAnalysis.clusterCount];
+            for (int i = 0; i < mainTemporalAnalysis.clusterCount; i++) {
                 System.out.println();
                 System.out.println("Cluster " + i);
 
@@ -288,7 +286,7 @@ public class Graphs {
 
                 // Put the nodes,
                 NodesMapper<String> mapper = new NodesMapper<String>();
-                gArray[i] = addNodesGraph(gArray[i], i, "src/main/resources/graph_" + prefix + ".txt", mapper);
+                gArray[i] = addNodesGraph(gArray[i], "src/main/resources/graph_" + prefix + ".txt", mapper);
 
                 //normalize the weights
                 gArray[i] = normalizeGraph(gArray[i]);

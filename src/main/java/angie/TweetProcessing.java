@@ -270,7 +270,6 @@ private static void writeClusters(final HashMap<String, Integer> clusters, Strin
         String key = cluster.getKey();
         pw.println(key + " " + clusters.get(key));
     }
-
     pw.close();
 }
 
@@ -302,7 +301,7 @@ public static void main (String[] args) throws Exception{
 	    HashMap<String, double[]> termTimeSeriesNegative = termsTimeSeries(nTermsNegative, "negative", 43200000L);
 
         int alphabetSize = 20;
-        int k = 4;
+        int k = mainTemporalAnalysis.clusterCount;
         HashMap<String, String> termSAXPositive = transformTimeSeriesToSAX(termTimeSeriesPositive, alphabetSize);
         HashMap<String, String> termSAXNegative = transformTimeSeriesToSAX(termTimeSeriesNegative, alphabetSize);
         System.out.println("all before done");

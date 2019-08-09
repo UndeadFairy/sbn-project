@@ -13,7 +13,7 @@ public class KMeansAlgorithm {
     private final HashMap<Integer, Character> ic;
     private final HashMap<String, Integer> saxCluster;
     private final ArrayList<String> saxStrings;
-    private final int k;
+    private int k = mainTemporalAnalysis.clusterCount;
     private final int alphabetSize;
     
 	public KMeansAlgorithm(int k, int alphabetSize, ArrayList<String> saxStrings) {

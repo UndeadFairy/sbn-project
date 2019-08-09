@@ -1,5 +1,4 @@
 package angie;
-import angie.Graphs;
 import java.io.*;
 import java.util.*;
 import angie.TweetProcessing;
@@ -34,6 +33,18 @@ public class TimeSeriesComparison {
     	compareTimeSeries(3, "negative", "largestcc");
 
     }
+    
+    private static void saveTimeSeriesComparison(HashMap<String, double[]> ts, Integer clId , String sentiment, String method) throws IOException {
+        PrintWriter pw = new PrintWriter(new FileWriter("src/main/resources/ts3h_" + sentiment + "_" + clId +  "_" + method + ".txt"));
+        for (String tweet : ts.keySet()) {
+        	StringJoiner joiner = new StringJoiner(";");
+        	for (double frequency : ts.get(tweet)) {
+        	    joiner.add(Double.toString(frequency));
+        	}
+        	pw.println(tweet + ";" + joiner.toString());
+        }
+        pw.close();
+    }
  
     private static void compareTimeSeries(int granularity, String sentiment, String method) throws Exception {
         HashMap<Integer, LinkedHashSet<String>> clusters;
@@ -42,9 +53,10 @@ public class TimeSeriesComparison {
         clusters = clusterFile(sentiment, method);
         // iterate through all the clusters, to be printed to file for graphs in python
         for (Integer clId : clusters.keySet()) {
-            System.out.println("Creating time series of cluster " + clId);
+            System.out.println("Creating time series of cluster " + clId + " of sentiment " + sentiment + " of method " + method);
             tweets = new ArrayList<String>(clusters.get(clId));
             HashMap<String, double[]> termsTimeSeriesToSave = TweetProcessing.termsTimeSeries(tweets, sentiment, granularityLong);
+            saveTimeSeriesComparison(termsTimeSeriesToSave, clId, sentiment, method);
             // save data to disk -> python
 //                    ImmutableTriple<ArrayList<String>, ArrayList<double[]>, ArrayList<double[]>> dataToPlot = processTSDataToPlot(hmTermsTS, timeInterval);
 //
