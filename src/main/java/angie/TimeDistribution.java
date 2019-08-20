@@ -1,57 +1,52 @@
 package angie;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import twitter4j.Twitter;
 import twitter4j.TwitterException;
-import twitter4j.TwitterFactory;
-import twitter4j.conf.ConfigurationBuilder;
+import angie.mainTemporalAnalysis;
 
 public class TimeDistribution {
 
-private static List<String> getRecordFromLine(String line) {
+private static List<String> getRecordFromLine(String line, String delimiter) {
+	// helper function reading content of file line, saving to list delimited by ';'
     List<String> values = new ArrayList<String>();
     Scanner rowScanner = new Scanner(line);
-    rowScanner.useDelimiter(";");
+    rowScanner.useDelimiter(delimiter);
     while (rowScanner.hasNext()) {
         values.add(rowScanner.next());
     }
-    
+    rowScanner.close();
     return values;
 }
 	
 public static List<List<String>> loadTweets(String loadname) throws IOException {   
-	    
-    	String tweetFileName = "src/main/resources/" + loadname + ".txt";
+	    // helper function reading content of file, line by line, saving to list of lists
+    	String tweetFileName = mainTemporalAnalysis.resourcesPathPart0 + loadname + ".txt";
     	List<List<String>> records = new ArrayList<List<String>>();
-
     	Scanner scanner = new Scanner(new File(tweetFileName));
-    	
     	if (scanner.hasNext()) {
     	    // skip header line
     	    scanner.nextLine();
     	}
 
-    	
 	    while (scanner.hasNextLine()) {
-	        records.add(getRecordFromLine(scanner.nextLine()));
+	        records.add(getRecordFromLine(scanner.nextLine(), ";"));
 	    }
 	    scanner.close();
 		return records;
     }
 
 public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws ParseException{
-	
+	// time analysis performed on tweets
+	// creates a data for histogram by week
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    Date dateStart = sdf.parse("2016-04-01");
-    Date dateStop = sdf.parse("2016-12-05");
-    
+    Date dateStart = sdf.parse(mainTemporalAnalysis.dateStart);
+    Date dateStop = sdf.parse(mainTemporalAnalysis.dateEnd);
+    // time operations
 	Calendar sDateCalendar = new GregorianCalendar();
     sDateCalendar.setTime(dateStart);
 	int weekStart = sDateCalendar.get(Calendar.WEEK_OF_YEAR);
@@ -59,7 +54,7 @@ public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws
 	int weekEnd = sDateCalendar.get(Calendar.WEEK_OF_YEAR);
 
 	ArrayList<Integer> weekSequence = new ArrayList<Integer>();
-	for (int i=weekStart; i<=weekEnd; i++) {
+	for (int i = weekStart; i<=weekEnd; i++) {
 		weekSequence.add(i);
 	}
 
@@ -71,11 +66,10 @@ public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws
 		weekCounter.add(0);
 	}
 
-
     for (int i = 0; i < loadname.size(); i++) {
     	List<String> row = loadname.get(i);
+    	// discard obviously wrong rows, which do not contain time
     	if (row.size() > 4) {
-    		//System.out.println(row);
         	String createdAtStr = row.get(4);
         	Date createdAt = dateFormatPrint.parse(createdAtStr);
         	sDateCalendar.setTime(createdAt);
@@ -88,20 +82,16 @@ public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws
         	weekCounter.set(weekIndex, thatWeek + 1);
     	}
     }
-	return weekCounter;
-	
+	return weekCounter; // data for histogram
 }
 
 public static void main (String[] args) throws TwitterException, IOException, ParseException{
-	
 	List<List<String>> positiveTweets = loadTweets("TwitterTweetDatapositive");
 	List<List<String>> negativeTweets = loadTweets("TwitterTweetDatanegative");
-	//List<List<String>> sampleTweets = loadTweets("TwitterTweetDatapositive");
-	//ArrayList<String> insider = sampleTweets[0]
 	
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    Date dateStart = sdf.parse("2016-04-01");
-    Date dateStop = sdf.parse("2016-12-05");
+    Date dateStart = sdf.parse(mainTemporalAnalysis.dateStart);
+    Date dateStop = sdf.parse(mainTemporalAnalysis.dateEnd);
     
 	Calendar sDateCalendar = new GregorianCalendar();
     sDateCalendar.setTime(dateStart);
@@ -118,15 +108,14 @@ public static void main (String[] args) throws TwitterException, IOException, Pa
 	ArrayList <Integer> weeksNegative = selectDates(negativeTweets);
 
 	//write output of histogram count
-	String histogramFileName = "src/main/resources/TweetHistogram.txt";
-	File tweetFile = new File(histogramFileName);
-	tweetFile.delete();
+	String histogramFileName = mainTemporalAnalysis.resourcesPathPart0 + "TweetHistogram.txt";
+	//File tweetFile = new File(histogramFileName);
+	//tweetFile.delete();
 	PrintWriter pw = new PrintWriter(new FileWriter(histogramFileName, true));
     pw.println(weekSequence);
     pw.println(weeksPositive);
     pw.println(weeksNegative);
     pw.close();
-	
 }
 
  

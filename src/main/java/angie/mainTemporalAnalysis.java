@@ -8,6 +8,11 @@ import angie.TimeSeriesComparison;
 public class mainTemporalAnalysis {
 	// main class launching other parts of the tasks - Part 0
   public static Integer clusterCount = 4;
+  public static String resourcesPathPart0 = "src/main/resources/part0/";
+  public static String dateStart = "2016-04-01";
+  public static String dateEnd = "2016-12-05";
+  public static Integer alphabetSize = 20;	
+
   public static void main(String[] args) throws Exception {
 	// download tweet data full + selected variables
     configbuilder.main(args);
