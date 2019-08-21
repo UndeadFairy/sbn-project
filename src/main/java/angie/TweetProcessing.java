@@ -37,7 +37,7 @@ import angie.mainTemporalAnalysis;
 
 public class TweetProcessing {
     public static final CharArraySet stopwords = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
-	public static Document toLuceneDocument(String tweet, String user, String displayName, long id, String rtUser, long rtId, String dateTimeStr) throws IOException, ParseException, java.text.ParseException {
+	public static Document createLuceneDocument(String tweet, String user, String displayName, long id, String rtUser, long rtId, String dateTimeStr) throws IOException, ParseException, java.text.ParseException {
 		// stores all relevant information about tweet to lucene index for further analysis
 		Document document = new Document();
         document.add(new TextField("tweet", tweet, Field.Store.YES));
@@ -96,7 +96,7 @@ public class TweetProcessing {
 		        	String modified_tweet_text = raw_tweet_text.replaceAll("https", " ").replaceAll("http", " ").replaceAll("[^\\p{L}\\s]", "").toLowerCase();
 
 		        	//if (modified_tweet_text.contains("referendum")) {
-		        		document = toLuceneDocument(modified_tweet_text, screen_name, displayName, tweetId, retweeted_status_user, retweeted_status_id, created_at);
+		        		document = createLuceneDocument(modified_tweet_text, screen_name, displayName, tweetId, retweeted_status_user, retweeted_status_id, created_at);
 	                    IndexWriter.addDocument(document); // add the document to the index	
 		        	//}
 		        	

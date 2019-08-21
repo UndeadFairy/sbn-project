@@ -9,6 +9,7 @@ public class mainTemporalAnalysis {
 	// main class launching other parts of the tasks - Part 0
   public static Integer clusterCount = 4;
   public static String resourcesPathPart0 = "src/main/resources/part0/";
+  public static String givenDataResourcesPath = resourcesPathPart0 + "given_data/";
   public static String dateStart = "2016-04-01";
   public static String dateEnd = "2016-12-05";
   public static Integer alphabetSize = 20;	
