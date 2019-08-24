@@ -139,9 +139,9 @@ public class TweetProcessing {
 	public static HashMap<String, double[]> termsTimeSeries(ArrayList<String> termsStatsList, String sentiment, long grain) throws IOException, Exception {
 	    // create vector of frequencies inside the hashmap for all terms
 	    HashMap<String, double[]> termsFrequencies = new HashMap<String, double[]>();
-	    long startDate = 1459468800000L;
-	    long endDate = 1480896000000L;
-	    
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+	    long startDate = sdf.parse(mainTemporalAnalysis.givenDateStart).getTime();
+        long endDate = sdf.parse(mainTemporalAnalysis.givenDateEnd).getTime();
 	    // count of intervals
 	    int numberOfIntervals = (int) Math.ceil((endDate - startDate) / grain) + 1;
 	    for (int i = 0; i<termsStatsList.size();i++) {
@@ -238,7 +238,7 @@ public class TweetProcessing {
 	
 	private static void writeClusters(final HashMap<String, Integer> clusters, String sentiment) throws IOException {
 		// helper function, saves cluster hashmap to text file
-	    final PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 + sentiment + ".txt"));
+	    final PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 + "clusters_" + sentiment + ".txt"));
 	    for (Entry<String, Integer> cluster : clusters.entrySet()) {
 	        String key = cluster.getKey();
 	        pw.println(key + " " + clusters.get(key));
@@ -258,14 +258,14 @@ public class TweetProcessing {
 	}
 
 	public static void main (String[] args) throws Exception{
-	        createIndexAllTweets("positive");
-	        createIndexAllTweets("negative");
-		    createIndexAllTweets("all"); // not really used in the end
+	        //createIndexAllTweets("positive");
+	        //createIndexAllTweets("negative");
+		    //createIndexAllTweets("all"); // not really used in the end
 		    
 		    
 		    ArrayList<String> nTermsPositive = topNTerms(1000, "positive");
 		    ArrayList<String> nTermsNegative = topNTerms(1000, "negative");
-		    ArrayList<String> nTermsAll = topNTerms(1000, "all"); // not really used in the end
+		   // ArrayList<String> nTermsAll = topNTerms(1000, "all"); // not really used in the end
 		    
 		    HashMap<String, double[]> termTimeSeriesPositive = termsTimeSeries(nTermsPositive, "positive", 43200000L);
 		    HashMap<String, double[]> termTimeSeriesNegative = termsTimeSeries(nTermsNegative, "negative", 43200000L);

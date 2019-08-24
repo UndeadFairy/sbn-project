@@ -6,7 +6,7 @@ import angie.TweetProcessing;
 public class TimeSeriesComparison {
 
     public static HashMap<Integer, LinkedHashSet<String>> clusterFile(String sentiment, String method) throws IOException {
-    	String clusterPath = "src/main/resources/graph_" + sentiment + "_" + method + ".txt";
+    	String clusterPath = mainTemporalAnalysis.resourcesPathPart0 +"graph_" + sentiment + "_" + method + ".txt";
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(clusterPath)));
         String row;
         String[] splitted;
@@ -24,6 +24,7 @@ public class TimeSeriesComparison {
             cluster.add(tweet);
             clusteredIDs.put(clusterID, cluster);
         }
+        bufferedReader.close();
         return clusteredIDs;
     }
     public static void main(String[] args) throws Exception {
@@ -35,7 +36,7 @@ public class TimeSeriesComparison {
     }
     
     private static void saveTimeSeriesComparison(HashMap<String, double[]> ts, Integer clId , String sentiment, String method) throws IOException {
-        PrintWriter pw = new PrintWriter(new FileWriter("src/main/resources/ts3h_" + sentiment + "_" + clId +  "_" + method + ".txt"));
+        PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 +"ts3h_" + sentiment + "_" + clId +  "_" + method + ".txt"));
         for (String tweet : ts.keySet()) {
         	StringJoiner joiner = new StringJoiner(";");
         	for (double frequency : ts.get(tweet)) {

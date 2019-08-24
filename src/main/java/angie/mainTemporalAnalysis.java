@@ -12,6 +12,9 @@ public class mainTemporalAnalysis {
   public static String givenDataResourcesPath = resourcesPathPart0 + "given_data/";
   public static String dateStart = "2016-04-01";
   public static String dateEnd = "2016-12-05";
+  public static String givenDateStart = "2016-11-26";
+  public static String givenDateEnd = "2016-12-07";
+  
   public static Integer alphabetSize = 20;	
 
   public static void main(String[] args) throws Exception {
