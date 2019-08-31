@@ -3,10 +3,7 @@ import angie.mainTemporalAnalysis;
 import twitter4j.JSONException;
 import twitter4j.JSONObject;
 
-import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.LongField;
@@ -43,7 +40,7 @@ public class Index {
     }
     
     public static List<String> loadPoliticians(String filename) throws IOException {   
-	    // helper function reading content of politician file, line by line, removing twitter handle and  saving to list
+	    // helper function reading content of politician file, line by line, removing twitter handle and saving to list
     	List<String> politicians = new ArrayList<String>();
     	BufferedReader reader;
     	try {
@@ -92,7 +89,6 @@ public class Index {
     	return daySequence;
     }
 
-
     public static HashMap<Integer, Long> updateHistogram(HashMap<Integer, Long> dateSequence, long dateTime) throws ParseException, java.text.ParseException{
     	// increment one to a histogram bucket where input datetime lies
     	Calendar sDateCalendar = new GregorianCalendar();
@@ -114,6 +110,15 @@ public class Index {
         Long dateTime = (dateFormatPrint.parse(dateTimeCombined)).getTime();
         return dateTime;
     }
+    
+    public static IndexWriter createEmptyIndex(String directory, String sentiment) throws IOException {
+    	// creates empty Lucene index in given directory
+        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
+        IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
+        File indexFile = new File(mainTemporalAnalysis.resourcesPathPart0 + "index_tweets_" + sentiment);
+        FSDirectory index = FSDirectory.open(indexFile);
+        return new IndexWriter(index, cfg);
+    }
 
     public static Document createLuceneDocument(String tweet, String user, String displayName, long id, String rtUser, long rtId, long dateTime) throws IOException, java.text.ParseException {
 		// stores all relevant information about tweet to lucene index for further analysis
@@ -134,21 +139,15 @@ public class Index {
         return document;
     }
 
-    public static IndexWriter createEmptyIndex(String directory, String sentiment) throws IOException {
-        ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
-        IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
-        File indexFile = new File(mainTemporalAnalysis.resourcesPathPart0 + "index_tweets_" + sentiment);
-        FSDirectory index = FSDirectory.open(indexFile);
-        return new IndexWriter(index, cfg);
-    }
-
     public static void histogramToFile (HashMap <Integer, Long> histogram, String sentiment) throws IOException {
+    	// saves hashmap with histogram to a file, separated by ';' day by day
     	PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 + "histogram_provided_dataset_" + sentiment + ".txt"));
       	StringJoiner joinerKeys = new StringJoiner(";");
       	StringJoiner joinerValues = new StringJoiner(";");
       	Object[] keys =  histogram.keySet().toArray();
       	Arrays.sort(keys);
     	 for (Object key : keys) {
+    		 // write row like key;vals, separated by ;
     		 joinerKeys.add(key.toString());
     		 joinerValues.add(histogram.get(key).toString());
          }
@@ -158,6 +157,8 @@ public class Index {
     }
    
 	public static void createIndexesOfTweets() throws IOException, ParseException, JSONException, java.text.ParseException {
+		// parses given data from a folder to get relevant attributes to save to index
+		// saves data to Lucene index and also creates a histogram and writes to a file
         File[] sourceDataFileList = new File(mainTemporalAnalysis.givenDataResourcesPath).listFiles();
         double progressCounter = 0.0;
         String tweet = "";
@@ -175,7 +176,7 @@ public class Index {
             System.out.println("Reading " + gzFile.getName());
             bufferedReader = gzFileBufferedReader(gzFile.getPath());
             
-            //read the file, line by line
+            // read the file, line by line
             while ((tweet = bufferedReader.readLine()) != null) {
             	// get json with desired information
                 JSONObject json = readJSON(tweet);
@@ -185,9 +186,8 @@ public class Index {
                 long id = Long.parseLong((String) ((JSONObject) json.get("user")).get("id_str"));
                 long rtId = 0L;
                 String createdAt = (String) (json.get("created_at"));
-                // unzip zips, ungz gzs
-                // move to single folder all??
                 if (!json.isNull("in_reply_to_screen_name")) {
+                	// this is a retweet, save additional info
                     rtUser = (String) json.get("in_reply_to_screen_name");
                     rtId = Long.parseLong((String) json.get("in_reply_to_user_id_str"));
                 }
@@ -199,7 +199,7 @@ public class Index {
                 
                 List<String> politiciansPositive = loadPoliticians("TwitterPoliticiansPositiveFull");
                 List<String> politiciansNegative = loadPoliticians("TwitterPoliticiansNegativeFull");
-                // save to relevant lucene indexes user or retweetuser is a positive or negative politician
+                // save to relevant lucene indexes if user or retweetuser is a positive or negative politician
                 if (politiciansPositive.contains(user) || politiciansPositive.contains(rtUser)) {
                     IndexWriterPositive.addDocument(document); // add the document to the positive index
                     updateHistogram(daySequencePositive, dateTime);
@@ -220,12 +220,14 @@ public class Index {
         histogramToFile(daySequencePositive, "positive");
         histogramToFile(daySequenceNegative, "negative");
 
-        System.out.println("Peon is done with his work");
+        System.out.println("Worker is done with his work!");
     }
 
-	public static void main(String[] args) throws JSONException, IOException, ParseException, java.text.ParseException {
+	public static void mainIndex() throws JSONException, IOException, ParseException, java.text.ParseException {
 		createIndexesOfTweets();
-//		String pathie = mainTemporalAnalysis.resourcesPathPart0;
+	}
+	public static void main(String[] args) throws JSONException, IOException, ParseException, java.text.ParseException {
+		mainIndex();
 	}
 
 }

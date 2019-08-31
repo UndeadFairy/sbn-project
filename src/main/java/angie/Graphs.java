@@ -3,20 +3,9 @@ package angie;
 import static org.apache.lucene.util.Version.LUCENE_41;
 import angie.mainTemporalAnalysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 
-import org.apache.logging.log4j.core.Core;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
@@ -41,7 +30,7 @@ import it.stilo.g.structures.WeightedUndirectedGraph;
 import it.stilo.g.util.NodesMapper;
 
 public class Graphs {
-
+    public static int runner = (int) (Runtime.getRuntime().availableProcessors());    // depends on pc
     public static void writeCoocurrenceGraph(List<String> nodeA, List<String> nodeB, List<Integer> weight, List<Integer> clId, String fileName) {
     	// writes coocurrence graph in a given schema - node;node;weight;cluster id 
         try {
@@ -74,19 +63,31 @@ public class Graphs {
         return result;
     }
 
-    public static int countCoocurrence(String tweet1, String tweet2, IndexReader indexReader) throws IOException, ParseException {
-    	// Computing the weights - number of docs with shared word
+    private static Set<Integer> getLargestSet(Set<Set<Integer>> components) {
+    	// return largest set from given set of sets
+        int m = -1;
+        Set<Integer> largestSet = new HashSet<>();
+        for (Set<Integer> innerSet : components) {
+            if (innerSet.size() > m) {
+            	largestSet = innerSet;
+                m = innerSet.size();
+            }
+        }
+        return largestSet;
+    }
+
+    public static int getCoocurrence(String tweet1, String tweet2, IndexReader indexReader) throws IOException, ParseException {
+    	// Computing the weights - number of docs with shared word, returning top n hits to consider
         IndexSearcher searcher = new IndexSearcher(indexReader);
         Analyzer analyzer = new StandardAnalyzer(LUCENE_41);
         QueryParser parser = new QueryParser(LUCENE_41, "tweet", analyzer);
         Query searchQuery = parser.parse("+" + tweet1 + " +" + tweet2);
         TopDocs topHits = searcher.search(searchQuery, 5000000);
-        ScoreDoc[] scoreDocs = topHits.scoreDocs;
-        return scoreDocs.length;
+        return topHits.scoreDocs.length;
     }
 
-    public static void generateGraph(String cluster, String indexFolder, String filename) throws IOException, ParseException, Exception {
-        File directoryIndex = new File(indexFolder);
+    public static void generateCoocurenceGraph(String indexFolder, String cluster, String filename) throws IOException, ParseException, Exception {
+    	File directoryIndex = new File(indexFolder);
         IndexReader indexReader = DirectoryReader.open(FSDirectory.open(directoryIndex));
         List<String> nodeA = new ArrayList<String>();
         List<String> nodeB = new ArrayList<String>();
@@ -94,10 +95,6 @@ public class Graphs {
         List<Integer> clId = new ArrayList<Integer>();
         String[] rows = fileToArray(cluster);
         for (int i = 0; i < rows.length; i++) {
-        	// DELETE LATER
-        	if (i % 10 == 0) {
-                System.out.println(i + "lines !!!");
-        	}
             String[] wordA = rows[i].split(" ");
             int clusterIdA = Integer.parseInt(wordA[1]);
             for (int j = i; j < rows.length; j++) {
@@ -105,7 +102,8 @@ public class Graphs {
                 int clusterIdB = Integer.parseInt(wordB[1]);
                 // if same cluster and not equal words -> store it
                 if (clusterIdB == clusterIdA && !wordA[0].equals(wordB[0])) {
-                    int count = countCoocurrence(wordA[0], wordB[0], indexReader);
+                	// compute cooccurence of both words in the whole index
+                    int count = getCoocurrence(wordA[0], wordB[0], indexReader);
                     if (count > 0) {
                         nodeA.add(wordA[0]);
                         nodeB.add(wordB[0]);
@@ -118,53 +116,34 @@ public class Graphs {
         writeCoocurrenceGraph(nodeA, nodeB, weight, clId, filename);
     }
 
-    public static void main(String[] args) throws IOException, ParseException, Exception {
-        generateGraph( mainTemporalAnalysis.resourcesPathPart0 +"clusters_positive.txt", mainTemporalAnalysis.resourcesPathPart0 +"index_tweets_positive",  mainTemporalAnalysis.resourcesPathPart0 +"graph_positive.txt");
-        generateGraph(mainTemporalAnalysis.resourcesPathPart0 +"clusters_negative.txt",  mainTemporalAnalysis.resourcesPathPart0 +"index_tweets_negative", mainTemporalAnalysis.resourcesPathPart0 +"graph_negative.txt");
-    
-        
-    	int runner = (int) (Runtime.getRuntime().availableProcessors());
-        System.out.println(runner);
-        
-        extractKCoreAndConnectedComponent(0.07);
-    }
-    
-    // depends on pc
-    public static int runner = (int) (Runtime.getRuntime().availableProcessors());
-
-
     private static List<Integer> numberOfNodesInGraph(String graph) throws IOException {
-    
+    	// count number of nodes in a given graph by clusters
         String[] rows = fileToArray(graph);
         List<Integer> numberNodes = new ArrayList<Integer>();
         int n = rows.length;
-        for (int cIter = 0; cIter < mainTemporalAnalysis.clusterCount; cIter++) {
+        for (int c = 0; c < mainTemporalAnalysis.clusterCount; c++) {
             Set<String> words = new HashSet<String>();
             for (int i = 0; i < n; i++) {
                 String[] line = rows[i].split(";");
-                int cc = Integer.parseInt(line[3]);
-                if (cc == cIter) {
+                int clusterIdFromFile = Integer.parseInt(line[3]);
+                if (clusterIdFromFile == c) {
+                	// get both words
                     words.add(line[0]);
                     words.add(line[1]);
                 }
             }
+            // save their number
             numberNodes.add(words.size());
         }
         return numberNodes;
     }
 
-    private static WeightedUndirectedGraph addNodesGraph(WeightedUndirectedGraph graphUndirected, Integer k, String graph, NodesMapper<String> mapper) throws IOException {
-        // add the nodes from the a file created with coocurrencegraph.java, and returns the graph
-        //ReadFile rf = new ReadFile();
+    private static WeightedUndirectedGraph addNodes(WeightedUndirectedGraph graphUndirected, Integer k, String graph, NodesMapper<String> mapper) throws IOException {
+        // read file with cooccurrences, get all the nodes and return the graph
         String[] rows = fileToArray(graph);
-
-        // map the words into id for g stilo
-        //NodesMapper<String> mapper = new NodesMapper<String>();
-        // creathe the graph
-        // keep in mind that the id of a word is mapper.getId(s1) - 1 (important the -1)
         int n = rows.length;
         for (int i = 0; i < n; i++) {
-            // split the line in 3 parts: node1, node2, and weight
+            // split the line in 4 parts: node1, node2, and weight, clusterid
             String[] line = rows[i].split(";");
             if (Integer.parseInt(line[3]) == k) {
                 String nodeA = line[0];
@@ -172,15 +151,13 @@ public class Graphs {
                 Double weight = Double.parseDouble(line[2]);
                 // the graph is directed, add links in both ways
                 graphUndirected.add(mapper.getId(nodeA) - 1, mapper.getId(nodeB) - 1, weight);
-                //g.add(mapper.getId(node2) - 1, mapper.getId(node1) - 1, w);
             }
-
         }
         return graphUndirected;
     }
 
-    private static WeightedUndirectedGraph normalizeGraph(WeightedUndirectedGraph graphUndirected) {
-        // normalize the weights of the edges
+    private static WeightedUndirectedGraph normalize(WeightedUndirectedGraph graphUndirected) {
+        // normalize the weights of the edges to 0,1
         double sum = 0;
         for (int i = 0; i < graphUndirected.size - 1; i++) {
             sum = 0;
@@ -195,34 +172,18 @@ public class Graphs {
         return graphUndirected;
     }
 
-    private static WeightedUndirectedGraph kcore(WeightedUndirectedGraph graphUndirected) throws InterruptedException {
+    private static WeightedUndirectedGraph computeKcore(WeightedUndirectedGraph graphUndirected) throws InterruptedException {
+    	// using stilo g library compute kcore and save the result
         WeightedUndirectedGraph graphUndirectedCopy = UnionDisjoint.copy(graphUndirected, runner);
-        it.stilo.g.structures.Core cc = CoreDecomposition.getInnerMostCore(graphUndirectedCopy, runner);
-        System.out.println("Kcore");
-        System.out.println("Minimum degree: " + cc.minDegree);
-        System.out.println("Vertices: " + cc.seq.length);
-        System.out.println("Seq: " + cc.seq);
-
+        it.stilo.g.structures.Core core = CoreDecomposition.getInnerMostCore(graphUndirectedCopy, runner);
         graphUndirectedCopy = UnionDisjoint.copy(graphUndirected, runner);
-        WeightedUndirectedGraph s = SubGraph.extract(graphUndirectedCopy, cc.seq, runner);
-        return s;
+        WeightedUndirectedGraph resultingGraph = SubGraph.extract(graphUndirectedCopy, core.seq, runner);
+        return resultingGraph;
     }
 
-    private static Set<Integer> getLargestSet(Set<Set<Integer>> components) {
-        int m = -1;
-        Set<Integer> largestSet = new HashSet<>();
-        for (Set<Integer> innerSet : components) {
-            if (innerSet.size() > m) {
-            	largestSet = innerSet;
-                m = innerSet.size();
-            }
-        }
-        return largestSet;
-    }
-
-    private static WeightedUndirectedGraph getLargestCC(WeightedUndirectedGraph graphUndirected) throws InterruptedException {
-        // this get the largest component of the graph and returns a graph too
-        //System.out.println(Arrays.deepToString(g.weights));
+    private static WeightedUndirectedGraph computeLargestCC(WeightedUndirectedGraph graphUndirected) throws InterruptedException {
+    	// using stilo g library compute largest connected component and save the result
+    	// prefill array with ints 0-size for rootedConnectedComponents
         int[] indices = new int[graphUndirected.size];
         for (int i = 0; i < graphUndirected.size; i++) {
         	indices[i] = i;
@@ -231,85 +192,68 @@ public class Graphs {
         Set<Integer> largestSet = getLargestSet(connectedComponents);
         int[] subnodes = new int[largestSet.size()];
         Iterator<Integer> iterator = largestSet.iterator();
-        for (int j = 0; j < subnodes.length; j++) {
+        for (int j = 0; j < largestSet.size(); j++) {
             subnodes[j] = iterator.next();
         }
 
-        WeightedUndirectedGraph s = SubGraph.extract(graphUndirected, subnodes, runner);
-        return s;
+        WeightedUndirectedGraph resultingGraph = SubGraph.extract(graphUndirected, subnodes, runner);
+        return resultingGraph;
     }
 
-    /* 
-    iterate through all the edges, recovering the terms.
-    'edges' is a matrix, in which each row is a termID1, and in each column is 
-    another termID2 that has an edge with termID1. 
-    Ex:
-    [0] = [1, 5, 6]
-    [1] = [0, 8]
-    ...
-    Map back each termID to the term string and save to the edges in the following
-    format:
-    term1 term2 clusterID
-     */
-    private static void saveGraphToFile(PrintWriter pw, NodesMapper<String> mapper, int[][] edges, int clusterID) throws IOException {
-        String term1 = "", term2 = "";
-
+    private static void storeGraph(PrintWriter pw, NodesMapper<String> mapper, int[][] edges, int clusterID) throws IOException {
+    	// writes a graph to a file in a format, 'word1 word2 clusterid'
+        String tweet1 = "";
+        String tweet2 = "";
         for (int i = 0; i < edges.length; i++) {
+        	// only if there is an edge
             if (edges[i] != null) {
-                term1 = mapper.getNode(i + 1);
+            	tweet1 = mapper.getNode(i + 1);
                 for (int j = 0; j < edges[i].length; j++) {
-                    term2 = mapper.getNode(edges[i][j] + 1);
-                    pw.println(term1 + " " + term2 + " " + clusterID);
+                	tweet2 = mapper.getNode(edges[i][j] + 1);
+                    pw.println(tweet1 + " " + tweet2 + " " + clusterID);
                 }
             }
         }
     }
 
-    public static void extractKCoreAndConnectedComponent(double threshold) throws IOException, ParseException, Exception {
+    public static void extractAll(String sentiment, double threshold) throws IOException, ParseException, Exception {
+    	// aggregates calls to both kcore and largestcc, performs logging a saves outputs to files
+        // Get the number of nodes inside each cluster
+        List<Integer> numberNodes = numberOfNodesInGraph(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + sentiment + ".txt");
+        PrintWriter pwCC = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + sentiment + "_largestcc.txt"));
+        PrintWriter pwKcore = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + sentiment + "_kcore.txt"));
 
-        // do the same analysis for the yes-group and no-group
-        String[] prefixYesNo = {"positive", "negative"};
-        for (String prefix : prefixYesNo) {
+        // create the array of graphs
+        WeightedUndirectedGraph[] graphsArray = new WeightedUndirectedGraph[mainTemporalAnalysis.clusterCount];
+        for (int i = 0; i < mainTemporalAnalysis.clusterCount; i++) {
+            System.out.println("Cluster " + i + "just started");
+            graphsArray[i] = new WeightedUndirectedGraph(numberNodes.get(i) + 1);
 
-            // Get the number of nodes inside each cluster
-            List<Integer> numberNodes = numberOfNodesInGraph(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + prefix + ".txt");
+            NodesMapper<String> mapper = new NodesMapper<String>();
+            graphsArray[i] = addNodes(graphsArray[i], i, mainTemporalAnalysis.resourcesPathPart0 +"graph_" + sentiment + ".txt", mapper);
+            graphsArray[i] = normalize(graphsArray[i]);
 
-            PrintWriter pw_cc = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + prefix + "_largestcc.txt")); //open the file where the largest connected component will be written to
-            PrintWriter pw_kcore = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 +"graph_" + prefix + "_kcore.txt")); //open the file where the kcore will be written to
+            // remove edges where weight < threshold
+            graphsArray[i] = SubGraphByEdgesWeight.extract(graphsArray[i], threshold, 2);
 
-            // create the array of graphs
-            WeightedUndirectedGraph[] gArray = new WeightedUndirectedGraph[mainTemporalAnalysis.clusterCount];
-            for (int i = 0; i < mainTemporalAnalysis.clusterCount; i++) {
-                System.out.println();
-                System.out.println("Cluster " + i);
+            WeightedUndirectedGraph largestCCGraph = computeLargestCC(graphsArray[i]);
+            storeGraph(pwCC, mapper, largestCCGraph.in, i);
 
-                gArray[i] = new WeightedUndirectedGraph(numberNodes.get(i) + 1);
-
-                // Put the nodes,
-                NodesMapper<String> mapper = new NodesMapper<String>();
-                gArray[i] = addNodesGraph(gArray[i], i, mainTemporalAnalysis.resourcesPathPart0 +"graph_" + prefix + ".txt", mapper);
-
-                //normalize the weights
-                gArray[i] = normalizeGraph(gArray[i]);
-
-                AtomicDouble[] info = GraphInfo.getGraphInfo(gArray[i], 1);
-                System.out.println("Nodes:" + info[0]);
-                System.out.println("Edges:" + info[1]);
-                System.out.println("Density:" + info[2]);
-
-                // extract remove the edges with w<t
-                gArray[i] = SubGraphByEdgesWeight.extract(gArray[i], threshold, 1);
-
-                // get the largest CC and save to a file
-                WeightedUndirectedGraph largestCC = getLargestCC(gArray[i]);
-                saveGraphToFile(pw_cc, mapper, largestCC.in, i);
-
-                // Get the inner core and save to a file
-                WeightedUndirectedGraph kcore = kcore(gArray[i]);
-                saveGraphToFile(pw_kcore, mapper, kcore.in, i);
-            }
-            pw_cc.close();
-            pw_kcore.close();
+            WeightedUndirectedGraph kcoreGraph = computeKcore(graphsArray[i]);
+            storeGraph(pwKcore, mapper, kcoreGraph.in, i);
         }
+        pwCC.close();
+        pwKcore.close();
+    }
+    
+    public static void mainGraphs() throws IOException, ParseException, Exception {
+    	generateCoocurenceGraph(mainTemporalAnalysis.resourcesPathPart0 +"index_tweets_positive", mainTemporalAnalysis.resourcesPathPart0 +"clusters_positive.txt", mainTemporalAnalysis.resourcesPathPart0 +"graph_positive.txt");
+    	generateCoocurenceGraph(mainTemporalAnalysis.resourcesPathPart0 +"index_tweets_negative", mainTemporalAnalysis.resourcesPathPart0 +"clusters_negative.txt", mainTemporalAnalysis.resourcesPathPart0 +"graph_negative.txt");        
+    	extractAll("positive", 0.05);
+    	extractAll("negative", 0.05);
+    }
+    
+    public static void main(String[] args) throws IOException, ParseException, Exception {
+    	mainGraphs();
     }
 }
