@@ -24,4 +24,4 @@ hs_err_pid*
 
 target/classes/*.txt
 
-src/main/resources/*
+#src/main/resources/*
