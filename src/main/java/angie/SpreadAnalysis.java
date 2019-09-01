@@ -269,10 +269,10 @@ public class SpreadAnalysis {
         int[] seedsNegativeMSel = loadSeed(mapLong2Int, mainSpreadOfInfluence.resourcesPathPart2 + "input/M_2Neg.txt");
         spreadOfInfluenceAlgorithm(graph, seedsPositiveMSel, seedsNegativeMSel, "_M2_", 40);
         
-        //run for top k players TODO Change name of file input
-//        int[] seedsPositiveTopK = loadSeed(mapLong2Int, mainSpreadOfInfluence.resourcesPathPart2 + "input/M_2Pos.txt");
-//        int[] seedsNegativeTopK = loadSeed(mapLong2Int, mainSpreadOfInfluence.resourcesPathPart2 + "input/M_2Neg.txt");
-//        spreadOfInfluenceAlgorithm(graph, seedsPositiveTopK, seedsNegativeTopK, "_TopK_", 40);
+        // run for top k players
+        int[] seedsPositiveTopK = loadSeed(mapLong2Int, mainSpreadOfInfluence.resourcesPathPart2 + "input/KPP_Pos.txt");
+        int[] seedsNegativeTopK = loadSeed(mapLong2Int, mainSpreadOfInfluence.resourcesPathPart2 + "input/KPP_Neg.txt");
+        spreadOfInfluenceAlgorithm(graph, seedsPositiveTopK, seedsNegativeTopK, "_KPP_", 40);
     }
     
     public static void main(String[] args) throws FileNotFoundException, IOException, org.apache.lucene.queryparser.classic.ParseException, InterruptedException {
