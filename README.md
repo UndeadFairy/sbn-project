@@ -21,6 +21,7 @@ git clone git@github.com:UndeadFairy/sbn-project.git
 
 All provided gzipped tweet stream files (*TW-1480170614348.gz* and other) need to be manually placed (or soft-linked) to a folder **src/main/resources/part0/given_data/**, to be reachable by the app.
 
+For Part 1, the app needs a different tweet stream files structure, where in order to be able to fit files content into the RAM, they were ungzipped and split to files with size 1GB.
 #### User graph
 
 Because of the fact that different parts of the project were worked on separately, some parts of the code use gzipped graph file and other used raw text file. Because of that, in order to reproduce the analysis, both provided user graph file **Official_SBN-ITA-2016-Net** and gzipped version **Official_SBN-ITA-2016-Net.gz** should be placed to a folder **src/main/resources/part2/given_graph/**.
@@ -43,6 +44,7 @@ cfg.setOAuthConsumerKey("CONSUMER-KEY");
 cfg.setOAuthConsumerSecret("CONSUMER-SECRET");
 
 ```
+
 ## **REPORT**
 
 [Link to report (PDF).](report.pdf)
