@@ -37,7 +37,7 @@ import angie.mainTemporalAnalysis;
 
 public class TweetProcessing {
     public static final CharArraySet stopwords = CharArraySet.copy(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
-	public static Document toLuceneDocument(String tweet, String user, String displayName, long id, String rtUser, long rtId, String dateTimeStr) throws IOException, ParseException, java.text.ParseException {
+	public static Document createLuceneDocument(String tweet, String user, String displayName, long id, String rtUser, long rtId, String dateTimeStr) throws IOException, ParseException, java.text.ParseException {
 		// stores all relevant information about tweet to lucene index for further analysis
 		Document document = new Document();
         document.add(new TextField("tweet", tweet, Field.Store.YES));
@@ -53,6 +53,7 @@ public class TweetProcessing {
     }
 
     public static IndexWriter createEmptyIndex(String directory, String sentiment) throws IOException {
+    	// creates empty Lucene index in given directory
         ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_41, ItalianAnalyzer.getDefaultStopSet());
         IndexWriterConfig cfg = new IndexWriterConfig(Version.LUCENE_41, analyzer);
         File indexFile = new File(mainTemporalAnalysis.resourcesPathPart0 + "index_tweets_" + sentiment);
@@ -61,10 +62,12 @@ public class TweetProcessing {
     }
    
 	public static void createIndexAllTweets(String sentiment) throws IOException, ParseException {
+		// stores all relevant information about tweet to lucene index for further analysis
         String tweetFileName = mainTemporalAnalysis.resourcesPathPart0 + "TwitterTweetData" + sentiment + ".txt";
         IndexWriter IndexWriter = createEmptyIndex("all_tweets_index/", sentiment);
 		try {
 	        FileReader filereader = new FileReader(tweetFileName);
+	        // create CSV parser for saved data that was created in previous steps
 	        CSVParser parser =
 	        		new CSVParserBuilder()
 	        		.withSeparator(';')
@@ -94,12 +97,8 @@ public class TweetProcessing {
 		        	String raw_tweet_text = record[8].replaceAll("(RT @[a-zA-Z0-9-_]{1,}:)", " "); 
 		        	// further tweet text cleanup
 		        	String modified_tweet_text = raw_tweet_text.replaceAll("https", " ").replaceAll("http", " ").replaceAll("[^\\p{L}\\s]", "").toLowerCase();
-
-		        	//if (modified_tweet_text.contains("referendum")) {
-		        		document = toLuceneDocument(modified_tweet_text, screen_name, displayName, tweetId, retweeted_status_user, retweeted_status_id, created_at);
-	                    IndexWriter.addDocument(document); // add the document to the index	
-		        	//}
-		        	
+	        		document = createLuceneDocument(modified_tweet_text, screen_name, displayName, tweetId, retweeted_status_user, retweeted_status_id, created_at);
+                    IndexWriter.addDocument(document); // add the document to the index	
 	        	}
 	        }
 	        System.out.println(counter);
@@ -115,16 +114,15 @@ public class TweetProcessing {
     public static ArrayList<String> fromTermStatsToList(TermStats[] termsStats) {
     	// helper function to handle lucene termstats results and return them as strings
         ArrayList<String> termsList = new ArrayList<String>();
-
         for (TermStats term : termsStats) {
             termsList.add(term.termtext.utf8ToString());
         }
         return termsList;
     }
     
-
+    
     private static ArrayList<String> topNTerms (int N, String sentiment) throws IOException, Exception {
-        // returns a list containing the N most frequent terms in the dictionary located in indexDirectory
+        // returns a list containing the N most frequent terms in the lucene index located in indexDirectory
     	String dirName = mainTemporalAnalysis.resourcesPathPart0 + "index_tweets_" + sentiment;
         File indexFile = new File(dirName);
         FSDirectory indexFSDirectory = FSDirectory.open(indexFile);
@@ -139,9 +137,9 @@ public class TweetProcessing {
 	public static HashMap<String, double[]> termsTimeSeries(ArrayList<String> termsStatsList, String sentiment, long grain) throws IOException, Exception {
 	    // create vector of frequencies inside the hashmap for all terms
 	    HashMap<String, double[]> termsFrequencies = new HashMap<String, double[]>();
-	    long startDate = 1459468800000L;
-	    long endDate = 1480896000000L;
-	    
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+	    long startDate = sdf.parse(mainTemporalAnalysis.givenDateStart).getTime();
+        long endDate = sdf.parse(mainTemporalAnalysis.givenDateEnd).getTime();
 	    // count of intervals
 	    int numberOfIntervals = (int) Math.ceil((endDate - startDate) / grain) + 1;
 	    for (int i = 0; i<termsStatsList.size();i++) {
@@ -199,7 +197,6 @@ public class TweetProcessing {
         // from timeseries of the word frequencies, create a SAX string that represents it
     	SAXProcessor sp = new SAXProcessor();
         SAXRecords res = sp.ts2saxByChunking(timeSeries, timeSeries.length, alphabet.getCuts(alphabetSize), nThreshold);
-        System.out.println(res.getSAXString(""));
         return res.getSAXString("");
     }
 
@@ -221,7 +218,6 @@ public class TweetProcessing {
 	        	values[i] = values[i] / maxFreq;
 	        }
 	    }
-	
 	    // normalize all elements to 0, 1
 	    for (Entry<String, double[]> ee : termsFrequencies.entrySet()) {
 	        String tweet = ee.getKey();
@@ -238,7 +234,7 @@ public class TweetProcessing {
 	
 	private static void writeClusters(final HashMap<String, Integer> clusters, String sentiment) throws IOException {
 		// helper function, saves cluster hashmap to text file
-	    final PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 + sentiment + ".txt"));
+	    final PrintWriter pw = new PrintWriter(new FileWriter(mainTemporalAnalysis.resourcesPathPart0 + "clusters_" + sentiment + ".txt"));
 	    for (Entry<String, Integer> cluster : clusters.entrySet()) {
 	        String key = cluster.getKey();
 	        pw.println(key + " " + clusters.get(key));
@@ -257,40 +253,44 @@ public class TweetProcessing {
 	    return termClusters;
 	}
 
-	public static void main (String[] args) throws Exception{
-	        createIndexAllTweets("positive");
+	public static void mainTweetProcessing (Boolean useOwnData) throws Exception{
+        if (useOwnData) {
+        	createIndexAllTweets("positive");
 	        createIndexAllTweets("negative");
-		    createIndexAllTweets("all"); // not really used in the end
-		    
-		    
-		    ArrayList<String> nTermsPositive = topNTerms(1000, "positive");
-		    ArrayList<String> nTermsNegative = topNTerms(1000, "negative");
-		    ArrayList<String> nTermsAll = topNTerms(1000, "all"); // not really used in the end
-		    
-		    HashMap<String, double[]> termTimeSeriesPositive = termsTimeSeries(nTermsPositive, "positive", 43200000L);
-		    HashMap<String, double[]> termTimeSeriesNegative = termsTimeSeries(nTermsNegative, "negative", 43200000L);
-	
-	        int alphabetSize = mainTemporalAnalysis.alphabetSize;
-	        int k = mainTemporalAnalysis.clusterCount;
-	        HashMap<String, String> termSAXPositive = transformTimeSeriesToSAX(termTimeSeriesPositive, alphabetSize);
-	        HashMap<String, String> termSAXNegative = transformTimeSeriesToSAX(termTimeSeriesNegative, alphabetSize);
-	        System.out.println("all before done");
-	
-	        KMeansAlgorithm KMeansPositive = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXPositive.values()));
-	        HashMap<String, Integer> positiveSAXClusters = KMeansPositive.getClusters();
-	        System.out.println("positive getclusters done");
-	
-	        KMeansAlgorithm KMeansNegative = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXNegative.values()));
-	        HashMap<String, Integer> negativeSAXClusters = KMeansNegative.getClusters();
-	        System.out.println("negative getclusters done");
-	        
-	        HashMap<String, Integer> clustersPositive = clusterMapping(positiveSAXClusters, termSAXPositive);
-	        HashMap<String, Integer> clustersNegative = clusterMapping(negativeSAXClusters, termSAXNegative);
-	        System.out.println("mapping done");
-	
-	        writeClusters(clustersPositive, "positive");
-	        writeClusters(clustersNegative, "negative");
-	        System.out.println("write done");
+		    // createIndexAllTweets("all"); // not really used in the end
+        }
 
+	    ArrayList<String> nTermsPositive = topNTerms(1000, "positive");
+	    ArrayList<String> nTermsNegative = topNTerms(1000, "negative");
+	    
+	    HashMap<String, double[]> termTimeSeriesPositive = termsTimeSeries(nTermsPositive, "positive", 43200000L);
+	    HashMap<String, double[]> termTimeSeriesNegative = termsTimeSeries(nTermsNegative, "negative", 43200000L);
+
+        int alphabetSize = mainTemporalAnalysis.alphabetSize;
+        int k = mainTemporalAnalysis.clusterCount;
+        HashMap<String, String> termSAXPositive = transformTimeSeriesToSAX(termTimeSeriesPositive, alphabetSize);
+        HashMap<String, String> termSAXNegative = transformTimeSeriesToSAX(termTimeSeriesNegative, alphabetSize);
+        System.out.println("all before done");
+
+        KMeansAlgorithm KMeansPositive = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXPositive.values()));
+        HashMap<String, Integer> positiveSAXClusters = KMeansPositive.getClusters();
+        System.out.println("positive getclusters done");
+
+        KMeansAlgorithm KMeansNegative = new KMeansAlgorithm(k, alphabetSize, new ArrayList<>(termSAXNegative.values()));
+        HashMap<String, Integer> negativeSAXClusters = KMeansNegative.getClusters();
+        System.out.println("negative getclusters done");
+        
+        HashMap<String, Integer> clustersPositive = clusterMapping(positiveSAXClusters, termSAXPositive);
+        HashMap<String, Integer> clustersNegative = clusterMapping(negativeSAXClusters, termSAXNegative);
+        System.out.println("mapping done");
+
+        writeClusters(clustersPositive, "positive");
+        writeClusters(clustersNegative, "negative");
+        System.out.println("write done");
+
+	}
+	public static void main (String[] args) throws Exception {
+		boolean useOwnData = true;
+		mainTweetProcessing(useOwnData);
 	}
 }

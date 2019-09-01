@@ -41,6 +41,7 @@ public static List<List<String>> loadTweets(String loadname) throws IOException 
     }
 
 public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws ParseException{
+	// TODO: DO NOT NEED THIS ANYMORE
 	// time analysis performed on tweets
 	// creates a data for histogram by week
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -85,7 +86,7 @@ public static ArrayList<Integer> selectDates(List<List<String>> loadname) throws
 	return weekCounter; // data for histogram
 }
 
-public static void main (String[] args) throws TwitterException, IOException, ParseException{
+public static void mainTimeDistribution() throws TwitterException, IOException, ParseException{
 	List<List<String>> positiveTweets = loadTweets("TwitterTweetDatapositive");
 	List<List<String>> negativeTweets = loadTweets("TwitterTweetDatanegative");
 	
@@ -117,7 +118,9 @@ public static void main (String[] args) throws TwitterException, IOException, Pa
     pw.println(weeksNegative);
     pw.close();
 }
-
+	public static void main (String[] args) throws TwitterException, IOException, ParseException{
+		mainTimeDistribution();
+	}
  
 
 }

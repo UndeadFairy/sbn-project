@@ -160,8 +160,7 @@ public class configbuilder {
     }
     
     
-	public static void main (String[] args) throws TwitterException, IOException, ParseException{
-		
+	public static void mainConfigbuilder() throws TwitterException, IOException, ParseException{
 		ConfigurationBuilder cfg = new ConfigurationBuilder();
 		cfg.setJSONStoreEnabled(true);
 		cfg.setOAuthAccessToken("");
@@ -183,6 +182,9 @@ public class configbuilder {
 		
 		downloadTweets(positive_passed_loaded, "positive", twitter);
 		downloadTweets(negative_passed_loaded, "negative", twitter);
+	}
+	public static void main(String[] args) throws TwitterException, IOException, ParseException {
+		mainConfigbuilder();
 	}
 }
 
