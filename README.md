@@ -3,7 +3,7 @@
 ## Social and behavioral network analysis project 2018-2019
 
 #### Created by:
-Kristyna Dolezalova (@UndeadFairy)
+Kristyna Dolezalova (https://github.com/UndeadFairy)
 
 Angie Catalina Carrillo Chappe
 
